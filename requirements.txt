@@ -1,0 +1,2 @@
+resemblyzer
+youtube-dl
