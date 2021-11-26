@@ -1,11 +1,11 @@
 import os
 import math
+import gspread
 import librosa
 import warnings
 warnings.filterwarnings('ignore')
 import streamlit as st
 from random import randint
-from gsheetsdb import connect
 from time import strftime, gmtime, time
 from streamlit_player import st_player
 from resemblyzer import VoiceEncoder
@@ -14,18 +14,25 @@ from utils import preprocess_audio, judge
 st.set_page_config(page_title="AI Impersonation Judge")
 st.title("Impersonation Judge")
 
-conn = connect()
-
 @st.cache(ttl=600)
-def run_query(query):
-    rows = conn.execute(query, headers=1)
-    return rows
+def connect_sheet():
+    creds = {
+            'type' : st.secrets['type_'], 'project_id' : st.secrets['project_id'],
+            'private_key_id' : st.secrets['private_key_id'],
+            'private_key' : st.secrets['private_key'],
+            'client_email' : st.secrets['client_email'],
+            'client_id' : st.secrets['client_id'], 
+            'auth_uri' : st.secrets['auth_uri'], 'token_uri' : st.secrets['token_uri'],
+            'auth_provider_x509_cert_url' : st.secrets['auth_provider_x509_cert_url'],
+            'client_x509_cert_url' : st.secrets['client_x509_cert_url']
+            }
+    sa = gspread.service_account_from_dict(creds)
+    sh = sa.open(st.secrets["sheet_name"])
+    worksheet = sh.worksheet("Sheet1")
+    return worksheet
 
 def update_db(datalist):
-    pass
-
-sheet_url = st.secrets["public_gsheets_url"]
-rows = run_query(f'SELECT * FROM "{sheet_url}"')
+    st.write(datalist)
 
 @st.cache(allow_output_mutation=True)
 def load_model():
@@ -33,6 +40,7 @@ def load_model():
     return model
 
 model = load_model()
+worksheet = connect_sheet()
 
 st.info("This web app is still in production, so don't be surprised if it doesn't work as expected just yet")
 intro = """
@@ -89,5 +97,5 @@ if link and user_audio:
             st.player(links[num])
     st.write("Do you agree with the judge's score?")
     curr_time = int(time())
-    # st.button("Agree", on_click=update_db, args=(curr_time, score, link, 1))
-    # st.button("Disagree", on_click=update_db, args=(curr_time, score, link, 0))
+    st.button("Agree", on_click=update_db, args=(curr_time, score, link, 1))
+    st.button("Disagree", on_click=update_db, args=(curr_time, score, link, 0))

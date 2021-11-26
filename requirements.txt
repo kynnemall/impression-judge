@@ -1,4 +1,4 @@
-gsheetsdb
+gspread
 resemblyzer
 streamlit-player
 youtube-dl
