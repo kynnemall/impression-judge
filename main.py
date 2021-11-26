@@ -5,13 +5,27 @@ import warnings
 warnings.filterwarnings('ignore')
 import streamlit as st
 from random import randint
-from time import strftime, gmtime
+from gsheetsdb import connect
+from time import strftime, gmtime, time
 from streamlit_player import st_player
 from resemblyzer import VoiceEncoder
 from utils import preprocess_audio, judge
 
 st.set_page_config(page_title="AI Impersonation Judge")
 st.title("Impersonation Judge")
+
+conn = connect()
+
+@st.cache(ttl=600)
+def run_query(query):
+    rows = conn.execute(query, headers=1)
+    return rows
+
+def update_db(datalist):
+    pass
+
+sheet_url = st.secrets["public_gsheets_url"]
+rows = run_query(f'SELECT * FROM "{sheet_url}"')
 
 @st.cache(allow_output_mutation=True)
 def load_model():
@@ -73,4 +87,7 @@ if link and user_audio:
             links = f.readlines()
             num = randint(0, len(links))
             st.player(links[num])
-    
+    st.write("Do you agree with the judge's score?")
+    curr_time = int(time())
+    # st.button("Agree", on_click=update_db, args=(curr_time, score, link, 1))
+    # st.button("Disagree", on_click=update_db, args=(curr_time, score, link, 0))
