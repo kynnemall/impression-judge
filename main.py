@@ -1,11 +1,11 @@
 import os
 import math
 import librosa
-import datetime
 import warnings
 warnings.filterwarnings('ignore')
 import streamlit as st
 from random import randint
+from time import strftime, gmtime
 from streamlit_player import st_player
 from resemblyzer import VoiceEncoder
 from utils import preprocess_audio, judge
@@ -53,8 +53,8 @@ if link and user_audio:
     
     t0, t1 = st.slider("Select start and end time in seconds", min_value=0.0,
                         max_value=max_s, value=[0.0, max_s], step=1.0)
-    t0_time = datetime.timedelta(seconds=t0)
-    t1_time = datetime.timedelta(seconds=t1)
+    t0_time = strftime("%H:%M:%S", gmtime(t0))
+    t1_time = strftime("%H:%M:%S", gmtime(t1))
     col5, col6 = st.columns(2)
     col5.write(f"Current start time {t0_time}")
     col6.write(f"Current end time {t1_time}")
