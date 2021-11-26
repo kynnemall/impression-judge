@@ -14,7 +14,6 @@ from utils import preprocess_audio, judge
 st.set_page_config(page_title="AI Impersonation Judge")
 st.title("Impersonation Judge")
 
-@st.cache(ttl=600)
 def connect_sheet():
     creds = {
             'type' : st.secrets['type_'], 'project_id' : st.secrets['project_id'],
