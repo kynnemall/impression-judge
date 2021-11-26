@@ -1,4 +1,3 @@
-librosa
 resemblyzer
 streamlit-player
 youtube-dl
