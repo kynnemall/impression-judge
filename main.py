@@ -9,29 +9,44 @@ from random import randint
 from time import strftime, gmtime, time
 from streamlit_player import st_player
 from resemblyzer import VoiceEncoder
-from utils import preprocess_audio, judge
+from utils import *
 
 st.set_page_config(page_title="AI Impersonation Judge")
 st.title("Impersonation Judge")
 
 def connect_sheet():
     creds = {
-            'type' : st.secrets['type_'], 'project_id' : st.secrets['project_id'],
-            'private_key_id' : st.secrets['private_key_id'],
-            'private_key' : st.secrets['private_key'],
-            'client_email' : st.secrets['client_email'],
-            'client_id' : st.secrets['client_id'], 
-            'auth_uri' : st.secrets['auth_uri'], 'token_uri' : st.secrets['token_uri'],
-            'auth_provider_x509_cert_url' : st.secrets['auth_provider_x509_cert_url'],
-            'client_x509_cert_url' : st.secrets['client_x509_cert_url']
-            }
+  "type": st.secrets["type_"],
+  "project_id": st.secrets["project_id"],
+  "private_key_id": st.secrets["private_key_id"],
+  "private_key": st.secrets["private_key"],
+  "client_email": st.secrets["client_email"],
+  "client_id": st.secrets["client_id"],
+  "auth_uri": st.secrets["auth_uri"],
+  "token_uri": st.secrets["token_uri"],
+  "auth_provider_x509_cert_url": st.secrets["auth_provider_x509_cert_url"],
+  "client_x509_cert_url": st.secrets["client_x509_cert_url"]
+}
     sa = gspread.service_account_from_dict(creds)
     sh = sa.open(st.secrets["sheet_name"])
     worksheet = sh.worksheet("Sheet1")
     return worksheet
 
-def update_db(datalist):
-    st.write(datalist)
+def update_db(sheet, current_time, score, link, user_input):
+    # find next clear row in sheet
+    found_row = False
+    num = 1000
+    while found_row == False:
+        res = sheet.get(f"A1:A{num}")
+        print(f"Found {len(res)} occupied rows")
+        if len(res) < num:
+            num = len(res)
+            found_row = True
+        else:
+            num += 1000
+
+    link_ext = link.split("watch")[1]
+    sheet.update(f"A{num+1}:D{num+1}", [[current_time, score, link_ext, user_input]])
 
 @st.cache(allow_output_mutation=True)
 def load_model():
@@ -41,7 +56,7 @@ def load_model():
 model = load_model()
 worksheet = connect_sheet()
 
-st.info("This web app is still in production, so don't be surprised if it doesn't work as expected just yet")
+st.info("This web app is still in development, so don't be surprised if it doesn't work as expected just yet")
 intro = """
 <p>I'm the Impersonation Judge and I'm going to gauge how well you can do voice impressions!
 <br>You just need to provide:</p>
@@ -50,7 +65,7 @@ intro = """
     <li>The start and end time in seconds of the section you want me to compare you to
     <li>An audio clip of your impression</li>
 </ol>
-<p>My fancy AI will allow me to grade your impression and give it a score between 0 and 100 of how close your impression is to the original. If you're ready, let's go!</p>
+<p>My fancy AI will allow me to grade your impression and give it a score between 0 and 100 of how close your impression is to the original. To learn more, check out the sidebar on the left. Now if you're ready, let's see your impression!</p>
 """
 st.markdown(intro, unsafe_allow_html=True)
 col1, col2 = st.columns(2)
@@ -80,8 +95,9 @@ if link and user_audio:
     col5.write(f"Current start time {t0_time}")
     col6.write(f"Current end time {t1_time}")
     
-    score = math.floor(judge(model, user_audio.name, t0, t1) * 100)
-    st.write(f"Your score: {score}/100")
+    score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
+    str_score = math.floor(score)
+    st.markdown(f"<p><strong>Your score: {score}/100<strong></p>", unsafe_allow_html=True)
     if score > 95:
         st.write("Wow, that's an amazing impression! I could hardly tell the difference!")
     elif score > 80:
@@ -96,5 +112,5 @@ if link and user_audio:
             st.player(links[num])
     st.write("Do you agree with the judge's score?")
     curr_time = int(time())
-    st.button("Agree", on_click=update_db, args=(curr_time, score, link, 1))
-    st.button("Disagree", on_click=update_db, args=(curr_time, score, link, 0))
+    st.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
+    st.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
