@@ -16,17 +16,17 @@ st.title("Impersonation Judge")
 
 def connect_sheet():
     creds = {
-  "type": st.secrets["type_"],
-  "project_id": st.secrets["project_id"],
-  "private_key_id": st.secrets["private_key_id"],
-  "private_key": st.secrets["private_key"],
-  "client_email": st.secrets["client_email"],
-  "client_id": st.secrets["client_id"],
-  "auth_uri": st.secrets["auth_uri"],
-  "token_uri": st.secrets["token_uri"],
-  "auth_provider_x509_cert_url": st.secrets["auth_provider_x509_cert_url"],
-  "client_x509_cert_url": st.secrets["client_x509_cert_url"]
-}
+            "type": st.secrets["type_"],
+            "project_id": st.secrets["project_id"],
+            "private_key_id": st.secrets["private_key_id"],
+            "private_key": st.secrets["private_key"],
+            "client_email": st.secrets["client_email"],
+            "client_id": st.secrets["client_id"],
+            "auth_uri": st.secrets["auth_uri"],
+            "token_uri": st.secrets["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["client_x509_cert_url"]
+    }
     sa = gspread.service_account_from_dict(creds)
     sh = sa.open(st.secrets["sheet_name"])
     worksheet = sh.worksheet("Sheet1")
@@ -67,8 +67,39 @@ intro = """
 </ol>
 <p>My fancy AI will allow me to grade your impression and give it a score between 0 and 100 of how close your impression is to the original. To learn more, check out the sidebar on the left. Now if you're ready, let's see your impression!</p>
 """
+
 st.markdown(intro, unsafe_allow_html=True)
 col1, col2 = st.columns(2)
+
+with st.sidebar.expander("How does this web app use my data?"):
+    data_usage = """
+    <p><strong>No personal data is requested or stored by this web app.</strong><br>If you click on either the <em>agree</em> or <em>disagree</em> button after your impression was scored, 
+    the app will store:
+    <ol>
+        <li>The time,</li>
+        <li>the YouTube link you provided,</li>
+        <li>your impression score, and
+        <li>whether you agree with the app's score or not.</li>
+    </p>
+    """
+    st.markdown(data_usage, unsafe_allow_html=True)
+
+with st.sidebar.expander("How does the Impersonation Judge score my impressions?"):
+    attribution = """
+    <p>Impersonation Judge makes use of the VoiceEncoder model from the <a href="https://github.com/resemble-ai/Resemblyzer" target="_blank" rel="noopener noreferrer"><em>Resemblyzer</em></a> Python package provided by Resemble AI.
+    This model processes audio signals and reduces that complex data into a sequence of 256 numbers. The Impersonation Judge compares
+    those numbers and determines a similarity score out of 100.<br><br>I would like to thank them very much for this open source package which will be useful for many more applications I have in mind!
+    </p>
+    """
+    st.markdown(attribution, unsafe_allow_html=True)
+
+with st.sidebar.expander("Contact"):
+    contact = """
+    <p>You can contact the app creater on <a href="https://twitter.com/MartinPlatelet" target="_blank" rel="noopener noreferrer">Twitter</a> 
+    with any queries or issues you may have. Feedback is always appreciated =)
+    </p>
+    """
+    st.markdown(contact, unsafe_allow_html=True)
 
 user_audio = col1.file_uploader("Upload an mp3 recording", "mp3")
 link = col2.text_input("Paste link to YouTube video here")
@@ -76,7 +107,7 @@ link = col2.text_input("Paste link to YouTube video here")
 if link and user_audio:
     print(user_audio)
     col3, col4 = st.columns(2)
-    with st.spinner("Getting audio from YouTube video"):
+    with st.spinner("Getting audio from YouTube video . . ."):
         os.system(f"youtube-dl --extract-audio --audio-format mp3 -o audiofile.mp3 {link}")
     st_player(link)
 
@@ -95,7 +126,8 @@ if link and user_audio:
     col5.write(f"Current start time {t0_time}")
     col6.write(f"Current end time {t1_time}")
     
-    score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
+    with st.spinner("Scoring your impression . . ."):
+        score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
     str_score = math.floor(score)
     st.markdown(f"<p><strong>Your score: {score}/100<strong></p>", unsafe_allow_html=True)
     if score > 95:
@@ -114,3 +146,4 @@ if link and user_audio:
     curr_time = int(time())
     st.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
     st.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
+
