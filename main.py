@@ -11,8 +11,8 @@ from streamlit_player import st_player
 from resemblyzer import VoiceEncoder
 from utils import *
 
-st.set_page_config(page_title="AI Impersonation Judge")
-st.title("Impersonation Judge")
+st.set_page_config(page_title="AI Impression Judge")
+st.title("Impression Judge")
 
 def connect_sheet():
     creds = {
@@ -58,18 +58,17 @@ worksheet = connect_sheet()
 
 st.info("This web app is still in development, so don't be surprised if it doesn't work as expected just yet")
 intro = """
-<p>I'm the Impersonation Judge and I'm going to gauge how well you can do voice impressions!
+<p>I'm the Impression Judge and I'm going to gauge how well you can do voice impressions!
 <br>You just need to provide:</p>
 <ol>
     <li>A link to a YouTube video containing the audio you're trying to mimic</li>
-    <li>The start and end time in seconds of the section you want me to compare you to
+    <li>The start and end time (in seconds) of the section of YouTube video you want me to compare your recording to
     <li>An audio clip of your impression</li>
 </ol>
 <p>My fancy AI will allow me to grade your impression and give it a score between 0 and 100 of how close your impression is to the original. To learn more, check out the sidebar on the left. Now if you're ready, let's see your impression!</p>
 """
 
 st.markdown(intro, unsafe_allow_html=True)
-col1, col2 = st.columns(2)
 
 with st.sidebar.expander("How does this web app use my data?"):
     data_usage = """
@@ -84,10 +83,10 @@ with st.sidebar.expander("How does this web app use my data?"):
     """
     st.markdown(data_usage, unsafe_allow_html=True)
 
-with st.sidebar.expander("How does the Impersonation Judge score my impressions?"):
+with st.sidebar.expander("How does the Impression Judge score my impressions?"):
     attribution = """
-    <p>Impersonation Judge makes use of the VoiceEncoder model from the <a href="https://github.com/resemble-ai/Resemblyzer" target="_blank" rel="noopener noreferrer"><em>Resemblyzer</em></a> Python package provided by Resemble AI.
-    This model processes audio signals and reduces that complex data into a sequence of 256 numbers. The Impersonation Judge compares
+    <p>Impression Judge makes use of the VoiceEncoder model from the <a href="https://github.com/resemble-ai/Resemblyzer" target="_blank" rel="noopener noreferrer"><em>Resemblyzer</em></a> Python package provided by Resemble AI.
+    This model processes audio signals and reduces that complex data into a sequence of 256 numbers. The Impression Judge compares
     those numbers and determines a similarity score out of 100.<br><br>I would like to thank them very much for this open source package which will be useful for many more applications I have in mind!
     </p>
     """
@@ -101,20 +100,19 @@ with st.sidebar.expander("Contact"):
     """
     st.markdown(contact, unsafe_allow_html=True)
 
-user_audio = col1.file_uploader("Upload an mp3 recording", "mp3")
-link = col2.text_input("Paste link to YouTube video here")
+user_audio = st.file_uploader("Upload an mp3 recording", "mp3")
+link = st.text_input("Paste link to YouTube video here")
 
 if link and user_audio:
     print(user_audio)
-    col3, col4 = st.columns(2)
     with st.spinner("Getting audio from YouTube video . . ."):
         os.system(f"youtube-dl --extract-audio --audio-format mp3 -o audiofile.mp3 {link}")
     st_player(link)
 
-    col3.write("YouTube audio")
-    col3.audio("audiofile.mp3")
-    col4.write("User audio")
-    col4.audio(user_audio)
+    st.write("YouTube audio")
+    st.audio("audiofile.mp3")
+    st.write("User audio")
+    st.audio(user_audio)
     data,sr = librosa.load("audiofile.mp3")
     max_s = float(data.shape[0] / sr)
     
@@ -128,10 +126,12 @@ if link and user_audio:
     
     with st.spinner("Scoring your impression . . ."):
         score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
-    str_score = math.floor(score)
-    st.markdown(f"<p><strong>Your score: {score}/100<strong></p>", unsafe_allow_html=True)
+    str_score = int(math.floor(score))
+    st.markdown(f"<p><strong>Your score: {str_score}/100<strong></p>", unsafe_allow_html=True)
     if score > 95:
-        st.write("Wow, that's an amazing impression! I could hardly tell the difference!")
+        st.write("Wow, that's an impressive impression! I thought it was the real deal!")
+    elif score > 87:
+        st.write("Great impression!")
     elif score > 80:
         st.write("Great impression, just one or two tiny details you can improve on, but great impression nonetheless")
     elif score > 70:
@@ -144,6 +144,7 @@ if link and user_audio:
             st.player(links[num])
     st.write("Do you agree with the judge's score?")
     curr_time = int(time())
-    st.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
-    st.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
+    col1, col2 = st.columns(2)
+    col1.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
+    col2.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
 
