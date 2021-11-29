@@ -100,7 +100,7 @@ with st.sidebar.expander("Contact"):
     """
     st.markdown(contact, unsafe_allow_html=True)
 
-user_audio = st.file_uploader("Upload an mp3 recording", "mp3")
+user_audio = st.file_uploader("Upload an mp3 recording", ["mp3", "m4a", "wav", "ogg"])
 link = st.text_input("Paste link to YouTube video here")
 
 if link and user_audio:
