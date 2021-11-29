@@ -1,4 +1,5 @@
 gspread
 resemblyzer
+streamlit
 streamlit-player
 youtube-dl
