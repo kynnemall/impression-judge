@@ -56,14 +56,14 @@ def load_model():
 model = load_model()
 worksheet = connect_sheet()
 
-st.info("This web app is still in development, so don't be surprised if it doesn't work as expected just yet")
+# st.info("This web app is currently benig improved, so some functionality may be affected at this time")
 intro = """
-<p>I'm the Impression Judge and I'm going to gauge how well you can do voice impressions!
+<p>I'm the Impression Judge and I'm going to gauge how well you can do impressions! They can be voice impressions of celebrities, your favourite cartoon characters, or even imitations of random noises . . . It's all up to you!
 <br>You just need to provide:</p>
 <ol>
     <li>A link to a YouTube video containing the audio you're trying to mimic</li>
     <li>The start and end time (in seconds) of the section of YouTube video you want me to compare your recording to
-    <li>An audio clip of your impression</li>
+    <li>An audio clip of your impression between 10 to 30 seconds</li>
 </ol>
 <p>My fancy AI will allow me to grade your impression and give it a score between 0 and 100 of how close your impression is to the original. To learn more, check out the sidebar on the left. Now if you're ready, let's see your impression!</p>
 """
@@ -115,6 +115,8 @@ if link and user_audio:
     st.audio(user_audio)
     data,sr = librosa.load("audiofile.mp3")
     max_s = float(data.shape[0] / sr)
+    user_data, sr = librosa.load(user_audio.name)
+    user_data = len(user_data) / sr
     
     t0, t1 = st.slider("Select start and end time in seconds", min_value=0.0,
                         max_value=max_s, value=[0.0, max_s], step=1.0)
@@ -124,27 +126,32 @@ if link and user_audio:
     col5.write(f"Current start time {t0_time}")
     col6.write(f"Current end time {t1_time}")
     
-    with st.spinner("Scoring your impression . . ."):
-        score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
-    str_score = int(math.floor(score))
-    st.markdown(f"<p><strong>Your score: {str_score}/100<strong></p>", unsafe_allow_html=True)
-    if score > 95:
-        st.write("Wow, that's an impressive impression! I thought it was the real deal!")
-    elif score > 87:
-        st.write("Great impression!")
-    elif score > 80:
-        st.write("Great impression, just one or two tiny details you can improve on, but great impression nonetheless")
-    elif score > 70:
-        st.write("That's a good impression you got there, could do with some polishing up though")
-    else:
-        st.write("Maybe you could do with a bit more practice. Why not check it this video for some tips?")
-        with open("helpful_links.txt", "r") as f:
-            links = f.readlines()
-            num = randint(0, len(links))
-            st.player(links[num])
-    st.write("Do you agree with the judge's score?")
-    curr_time = int(time())
-    col1, col2 = st.columns(2)
-    col1.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
-    col2.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
+    if user_data > 30 or user_data < 10:
+        st.info("Uploaded audio is greater than 30s. Please upload a file of 10-30s in length")
+    if t1 - t0 > 30:
+        st.info("Selected section is greater than 30s. Adjust the slider to select a section of 30s or less")
+    if user_data <= 30 and user_data >= 10 and t1 - t0 <= 30:
+        with st.spinner("Scoring your impression . . ."):
+            score = round(judge(model, user_audio.name, t0, t1) * 100, 3)
+        str_score = int(math.floor(score))
+        st.markdown(f"<p><strong>Your score: {str_score}/100<strong></p>", unsafe_allow_html=True)
+        if score > 95:
+            st.write("Wow, that's an impressive impression! I thought it was the real deal!")
+        elif score > 87:
+            st.write("Great impression!")
+        elif score > 80:
+            st.write("Great impression, just one or two tiny details you can improve on, but great impression nonetheless")
+        elif score > 70:
+            st.write("That's a good impression you got there, could do with some polishing up though")
+        else:
+            st.write("Maybe you could do with a bit more practice. Why not check out this video for some tips?")
+            with open("helpful_links.txt", "r") as f:
+                links = f.readlines()
+                num = randint(0, len(links))
+                st_player(links[num])
+        st.write("Do you agree with the judge's score?")
+        curr_time = int(time())
+        col1, col2 = st.columns(2)
+        col1.button("Agree", on_click=update_db, args=(worksheet, curr_time, score, link, 1))
+        col2.button("Disagree", on_click=update_db, args=(worksheet, curr_time, score, link, 0))
 
